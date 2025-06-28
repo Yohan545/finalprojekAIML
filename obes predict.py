@@ -2,21 +2,55 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import joblib
-
+import datetime
 from streamlit_option_menu import option_menu
 
-# Load pretrained model and scaler
+# Dummy users (username: password)
+USERS = {
+    "admin": "admin123",
+    "user1": "pass1",
+    "user2": "pass2",
+}
+
+# Load model & scaler
 rf_model = joblib.load('model/rf_model.pkl')
 scaler = joblib.load('model/scaler.pkl')
 
 # Page config
 st.set_page_config(layout="centered")
 
+def login():
+    st.title("🔐 Login ke Aplikasi")
+    with st.form("login_form"):
+        username = st.text_input("Username")
+        password = st.text_input("Password", type="password")
+        submitted = st.form_submit_button("Login")
+
+        if submitted:
+            if username in USERS and USERS[username] == password:
+                st.session_state.user = username
+                st.success(f"Selamat datang, {username}!")
+                st.rerun()
+            else:
+                st.error("Username atau password salah.")
+
+# Require login
+if "user" not in st.session_state:
+    login()
+    st.stop()
+
+# Sidebar
+with st.sidebar:
+    st.write(f"👤 Logged in as: **{st.session_state.user}**")
+    if st.button("Logout"):
+        del st.session_state.user
+        st.rerun()
+
+# Menu
 selected = option_menu(
     menu_title=None,
-    options=["Home", "Predict"],
-    icons=["house", "person"],
-    menu_icon="cast",
+    options=["Home", "Predict", "Riwayat"],
+    icons=["house", "person", "clock-history"],
     default_index=0,
     orientation="horizontal",
     styles={
@@ -28,21 +62,24 @@ selected = option_menu(
 
 def get_recommendation(category):
     recommendations = {
-        'Underweight': """- Porsi makan tinggi kalori sehat
-- Makan 5-6x sehari
-- Latihan kekuatan
-- Konsultasi medis""",
-        'Normal': """- Pola makan seimbang
-- Olahraga rutin
-- Hindari gula/lemak jenuh""",
-        'Overweight': """- Porsi rendah kalori tinggi nutrisi
-- Jalan kaki tiap hari
-- Konsultasi gizi""",
-        'Obesity': """- Makan kecil sering
-- Mulai aktivitas ringan
-- Konsultasi medis terarah"""
+        'Underweight': """- Porsi makan tinggi kalori sehat\n- Makan 5-6x sehari\n- Latihan kekuatan\n- Konsultasi medis""",
+        'Normal': """- Pola makan seimbang\n- Olahraga rutin\n- Hindari gula/lemak jenuh""",
+        'Overweight': """- Porsi rendah kalori tinggi nutrisi\n- Jalan kaki tiap hari\n- Konsultasi gizi""",
+        'Obesity': """- Makan kecil sering\n- Mulai aktivitas ringan\n- Konsultasi medis terarah"""
     }
     return recommendations.get(category, "Tidak ada rekomendasi.")
+
+def save_prediction(username, input_data, pred_class):
+    log = input_data.copy()
+    log["User"] = username
+    log["Predicted_Class"] = pred_class
+    log["Timestamp"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    try:
+        old = pd.read_csv("history.csv")
+        new = pd.concat([old, log], ignore_index=True)
+    except FileNotFoundError:
+        new = log
+    new.to_csv("history.csv", index=False)
 
 if selected == "Home":
     st.title("Obesity Class Predictor")
@@ -54,9 +91,8 @@ if selected == "Home":
 elif selected == "Predict":
     st.title("User Input for Obesity Prediction")
 
-    # Variabel kontrol pindah tab
     if 'step' not in st.session_state:
-        st.session_state.step = 1  # 1 = tab dasar, 2 = gaya hidup
+        st.session_state.step = 1
 
     if st.session_state.step == 1:
         sex = st.radio("Sex", ['Male', 'Female'])
@@ -110,9 +146,26 @@ elif selected == "Predict":
                 pred_class = {1: 'Underweight', 2: 'Normal', 3: 'Overweight', 4: 'Obesity'}[pred[0]]
 
                 st.success(f"Predicted Class: **{pred_class}**")
-
                 st.subheader("Rekomendasi")
                 st.markdown(get_recommendation(pred_class))
 
+                save_prediction(st.session_state.user, input_data, pred_class)
+
             st.button("Ulangi", on_click=lambda: st.session_state.update(step=1))
 
+elif selected == "Riwayat":
+    st.title("📋 Riwayat Prediksi Anda")
+
+    try:
+        df = pd.read_csv("history.csv")
+        user_data = df[df["User"] == st.session_state.user]
+
+        if user_data.empty:
+            st.info("Belum ada riwayat prediksi.")
+        else:
+            # Reorder columns: Timestamp, User, Predicted_Class, then the rest
+            cols = user_data.columns.tolist()
+            reordered = ["Timestamp", "User", "Predicted_Class"] + [col for col in cols if col not in ["Timestamp", "User", "Predicted_Class"]]
+            st.dataframe(user_data[reordered].sort_values("Timestamp", ascending=False))
+    except FileNotFoundError:
+        st.warning("Belum ada data riwayat disimpan.")
