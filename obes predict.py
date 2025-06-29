@@ -62,10 +62,10 @@ selected = option_menu(
 
 def get_recommendation(category):
     recommendations = {
-        'Underweight': """- Porsi makan tinggi kalori sehat\n- Makan 5-6x sehari\n- Latihan kekuatan\n- Konsultasi medis""",
-        'Normal': """- Pola makan seimbang\n- Olahraga rutin\n- Hindari gula/lemak jenuh""",
-        'Overweight': """- Porsi rendah kalori tinggi nutrisi\n- Jalan kaki tiap hari\n- Konsultasi gizi""",
-        'Obesity': """- Makan kecil sering\n- Mulai aktivitas ringan\n- Konsultasi medis terarah"""
+        'Underweight': "- Porsi makan tinggi kalori sehat\n- Makan 5-6x sehari\n- Latihan kekuatan\n- Konsultasi medis",
+        'Normal': "- Pola makan seimbang\n- Olahraga rutin\n- Hindari gula/lemak jenuh",
+        'Overweight': "- Porsi rendah kalori tinggi nutrisi\n- Jalan kaki tiap hari\n- Konsultasi gizi",
+        'Obesity': "- Makan kecil sering\n- Mulai aktivitas ringan\n- Konsultasi medis terarah"
     }
     return recommendations.get(category, "Tidak ada rekomendasi.")
 
@@ -81,18 +81,23 @@ def save_prediction(username, input_data, pred_class):
         new = log
     new.to_csv("history.csv", index=False)
 
+# ---------------- Home Page ----------------
 if selected == "Home":
+    st.session_state.last_page = "Home"
     st.title("Obesity Class Predictor")
     st.markdown("""
         Aplikasi ini memprediksi status obesitas seseorang berdasarkan input gaya hidup.
         Gunakan menu Predict untuk memasukkan data Anda.
     """)
 
+# ---------------- Predict Page ----------------
 elif selected == "Predict":
     st.title("User Input for Obesity Prediction")
 
-    if 'step' not in st.session_state:
+    # Reset step ke 1 setiap kali user berpindah ke tab Predict
+    if st.session_state.get("last_page") != "Predict":
         st.session_state.step = 1
+    st.session_state.last_page = "Predict"
 
     if st.session_state.step == 1:
         sex = st.radio("Sex", ['Male', 'Female'])
@@ -120,6 +125,7 @@ elif selected == "Predict":
 
         if st.button("Predict"):
             with st.spinner("Memproses prediksi..."):
+                # Ambil data dari Step 1
                 sex = st.session_state.sex
                 age = st.session_state.age
                 height = st.session_state.height
@@ -151,9 +157,12 @@ elif selected == "Predict":
 
                 save_prediction(st.session_state.user, input_data, pred_class)
 
-            st.button("Ulangi", on_click=lambda: st.session_state.update(step=1))
+            st.button("Ulangi", on_click=lambda: st.session_state.update(step=1, reset_step=False))
 
+
+# ---------------- Riwayat Page ----------------
 elif selected == "Riwayat":
+    st.session_state.last_page = "Riwayat"
     st.title("📋 Riwayat Prediksi Anda")
 
     try:
@@ -163,9 +172,25 @@ elif selected == "Riwayat":
         if user_data.empty:
             st.info("Belum ada riwayat prediksi.")
         else:
+            mapping_dict = {
+                'Sex': {1: 'Male', 2: 'Female'},
+                'Overweight_Obese_Family': {1: 'Yes', 2: 'No'},
+                'Consumption_of_Fast_Food': {1: 'Yes', 2: 'No'},
+                'Frequency_of_Consuming_Vegetables': {1.0: 'Rarely', 2.0: 'Sometimes', 3.0: 'Always'},
+                'Number_of_Main_Meals_Daily': {1.0: '1-2', 2.0: '3', 3.0: '3+'},
+                'Food_Intake_Between_Meals': {1: 'Rarely', 2: 'Sometimes', 3: 'Usually', 4: 'Always'},
+                'Smoking': {1: 'Yes', 2: 'No'},
+                'Liquid_Intake_Daily': {1.0: '<1L', 2.0: '1-2L', 3.0: '>2L'},
+                'Calculation_of_Calorie_Intake': {1: 'Yes', 2: 'No'},
+                'Physical_Excercise': {0.0: 'None', 1.0: '1-2', 2.0: '3-4', 3.0: '5-6', 3.5: '6+'},
+                'Schedule_Dedicated_to_Technology': {0.0: '0-2h', 1.0: '3-5h', 2.0: '>5h'},
+                'Type_of_Transportation_Used': {1: 'Automobile', 2: 'Motorbike', 3: 'Bike', 4: 'Public transport', 5: 'Walking'}
+            }
+            user_data = user_data.replace(mapping_dict)
+            
             # Reorder columns: Timestamp, User, Predicted_Class, then the rest
             cols = user_data.columns.tolist()
-            reordered = ["Timestamp", "User", "Predicted_Class"] + [col for col in cols if col not in ["Timestamp", "User", "Predicted_Class"]]
-            st.dataframe(user_data[reordered].sort_values("Timestamp", ascending=False))
+            ordered_cols = ['Timestamp', 'User', 'Predicted_Class'] + [col for col in cols if col not in ['Timestamp', 'User', 'Predicted_Class']]
+            st.dataframe(user_data[ordered_cols].sort_values("Timestamp", ascending=False), use_container_width=True)
     except FileNotFoundError:
         st.warning("Belum ada data riwayat disimpan.")

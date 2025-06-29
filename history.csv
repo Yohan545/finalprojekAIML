@@ -1,2 +1,8 @@
 Sex,Age,Height,Overweight_Obese_Family,Consumption_of_Fast_Food,Frequency_of_Consuming_Vegetables,Number_of_Main_Meals_Daily,Food_Intake_Between_Meals,Smoking,Liquid_Intake_Daily,Calculation_of_Calorie_Intake,Physical_Excercise,Schedule_Dedicated_to_Technology,Type_of_Transportation_Used,User,Predicted_Class,Timestamp
 1,25,170,1,1,1.0,1.0,1,1,1.0,1,0.0,0.0,1,admin,Obesity,2025-06-28 18:36:12
+1,25,170,1,1,1.0,1.0,1,1,1.0,1,0.0,0.0,1,user1,Obesity,2025-06-29 18:28:54
+1,25,170,2,2,1.0,1.0,1,2,1.0,2,0.0,0.0,1,admin,Normal,2025-06-29 18:38:21
+2,17,123,2,2,1.0,1.0,1,2,1.0,2,0.0,0.0,1,user1,Normal,2025-06-29 18:40:26
+1,64,163,2,1,3.0,2.0,3,2,3.0,2,3.0,1.0,5,admin,Overweight,2025-06-29 18:47:49
+1,25,170,1,1,1.0,1.0,1,1,1.0,1,0.0,0.0,1,user2,Obesity,2025-06-29 18:49:41
+2,25,170,2,2,1.0,1.0,1,2,1.0,2,0.0,0.0,1,user2,Normal,2025-06-29 18:53:33
